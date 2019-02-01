@@ -9,7 +9,7 @@
         <module name="FileSystemCat" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
+    <bytecodeTargetLevel target="1.8">
       <module name="FileSystemCat" target="1.8" />
     </bytecodeTargetLevel>
   </component>
