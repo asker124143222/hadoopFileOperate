@@ -24,8 +24,11 @@ public class FileSystemCat {
         //文本文件cat
 //        fileCat(args);
 
-        //文件copy
-        fileCopyWithProgress(args);
+        //文件copy，本地到远程
+//        fileCopyWithProgress(args);
+
+        //文件copy，远程到本地
+        copyFileToLocal(args);
 
         //file status
 //        fileStatus(args);
@@ -82,6 +85,7 @@ public class FileSystemCat {
             IOUtils.copyBytes(in, System.out, 4096, false);
         } finally {
             IOUtils.closeStream(in);
+            fs.close();
         }
     }
 
@@ -92,6 +96,7 @@ public class FileSystemCat {
         String locaSrc = args[0];
         String dst = args[1];
 
+        InputStream in = new BufferedInputStream(new FileInputStream(locaSrc));
         //从windows环境提交的时候需要设置hadoop用户名
         //在linux的其他用户环境下估计也需要
         System.setProperty("HADOOP_USER_NAME","hadoop");
@@ -110,13 +115,27 @@ public class FileSystemCat {
 //        System.out.println("copyFromLocalFile...done");
 
 
-        InputStream in = new BufferedInputStream(new FileInputStream(locaSrc));
+
 
         FSDataOutputStream out = null;
 
         out = fs.create(new Path(dst), () -> System.out.print("."));
 
         IOUtils.copyBytes(in, out, 4096, true);
+        fs.close();
+    }
+
+    //hadoop拷贝文件到本地
+    private static void copyFileToLocal(String[] args) throws Exception{
+        String remoteSrc = args[0];
+        String localDest = args[1];
+
+        Configuration conf = new Configuration();
+        FileSystem fs = FileSystem.get(URI.create(HDFSUri),conf);
+        FSDataInputStream in = fs.open(new Path(remoteSrc));
+        OutputStream out = new BufferedOutputStream(new FileOutputStream(localDest));
+        IOUtils.copyBytes(in,out,4096,true);
+        fs.close();
     }
 
     //查找文件，递归列出给定目录或者文件的属性
