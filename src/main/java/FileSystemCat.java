@@ -1,9 +1,7 @@
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.util.Progressable;
 
 import java.io.*;
 import java.net.URI;
@@ -24,10 +22,10 @@ public class FileSystemCat {
     public static void main(String[] args) throws Exception {
         long startTime = System.currentTimeMillis();
         //文本文件cat
-        fileCat(args);
+//        fileCat(args);
 
         //文件copy
-//        fileCopyWithProgress(args);
+        fileCopyWithProgress(args);
 
         //file status
 //        fileStatus(args);
@@ -89,16 +87,23 @@ public class FileSystemCat {
 
 
     //将本地文件拷贝到hadoop文件系统上
-    //只能在hadoop的节点机上运行
+    //需要开通datanode用于数据传输端口：9866
     private static void fileCopyWithProgress(String[] args) throws Exception {
         String locaSrc = args[0];
         String dst = args[1];
 
+        //从windows环境提交的时候需要设置hadoop用户名
+        //在linux的其他用户环境下估计也需要
+        System.setProperty("HADOOP_USER_NAME","hadoop");
+
         Configuration conf = new Configuration();
-        conf.set("fs.DefaultFs", "hdfs://bigdata-senior01.home.com:9000");
+//        conf.set("fs.DefaultFs", "hdfs://bigdata-senior01.home.com:9000");
 
-        FileSystem fs = FileSystem.get(URI.create(dst), conf);
+          //因为涉及到两个文件系统的数据传输，如果dst不是全路径的话（带不带hdfs的头）用这种方式取到的还是本地文件系统
+          //如果不涉及两个文件系统，dst写短路径是没问题的
+//        FileSystem fs = FileSystem.get(URI.create(dst), conf);
 
+        FileSystem fs = FileSystem.get(URI.create(HDFSUri),conf);
 
 //        fs.copyFromLocalFile(new Path(locaSrc),new Path(dst));
 //        fs.close();
@@ -110,9 +115,8 @@ public class FileSystemCat {
         FSDataOutputStream out = null;
 
         out = fs.create(new Path(dst), () -> System.out.print("."));
+
         IOUtils.copyBytes(in, out, 4096, true);
-        if (fs != null)
-            fs.close();
     }
 
     //查找文件，递归列出给定目录或者文件的属性
