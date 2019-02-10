@@ -2,9 +2,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 
 import java.io.*;
 import java.net.URI;
+import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -28,10 +31,15 @@ public class FileSystemCat {
 //        fileCopyWithProgress(args);
 
         //文件copy，远程到本地
-        copyFileToLocal(args);
+//        copyFileToLocal(args);
+
+        //文件写入
+  //      writeFile(args);
+
+        readFile(args);
 
         //file status
-//        fileStatus(args);
+        fileStatus(args);
 
         // file status pattern
 //        filePattern(args);
@@ -211,6 +219,53 @@ public class FileSystemCat {
             if (fs != null)
                 fs.close();
         }
+    }
+
+    private static void writeFile(String[] args) throws IOException{
+        Path f = new Path(args[0]);
+        Text inputString = new Text(args[1]);
+        Configuration conf = new Configuration();
+        conf.set("fs.defaultFS",HDFSUri);
+        FileSystem fs = FileSystem.get(conf);
+        FSDataOutputStream out =  fs.create(f,true);
+        byte[] bytes = serialize(inputString);
+        out.write(bytes);
+        out.close();
+        fs.close();
+    }
+
+    private static void readFile(String[] args) throws IOException{
+        Path f = new Path(args[0]);
+        Configuration conf = new Configuration();
+        conf.set("fs.defaultFS",HDFSUri);
+        FileSystem fs = FileSystem.get(conf);
+        FSDataInputStream in = fs.open(f);
+        Writable writable = new Text();
+        byte[] bytes = new byte[1024];
+
+        int length = in.read(bytes,0,1024);
+        System.out.println("length: "+length+",byte[]: "+new String(bytes));
+        bytes = derialize(writable,bytes);
+        System.out.println("writable:"+writable.toString()+",byte[]: "+new String(bytes));
+        in.close();
+        fs.close();
+
+    }
+
+    private static byte[] serialize(Writable writable) throws IOException{
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        DataOutputStream dataOutputStream = new DataOutputStream(out);
+        writable.write(dataOutputStream);
+        dataOutputStream.close();
+        return out.toByteArray();
+    }
+
+    private static byte[] derialize(Writable writable,byte[] bytes) throws IOException{
+        ByteArrayInputStream in = new ByteArrayInputStream(bytes);
+        DataInputStream dataIn = new DataInputStream(in);
+        writable.readFields(dataIn);
+        dataIn.close();
+        return  bytes;
     }
 
 
